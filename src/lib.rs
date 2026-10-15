@@ -6,6 +6,7 @@
 //! (destination, défaut `<SAVES_PATH>-backups`). `DKBOT_SAVES_KEEP` borne
 //! la rétention (défaut 20).
 
+mod cards;
 mod saves;
 
 use std::ffi::c_char;
@@ -33,6 +34,14 @@ fn is_owner(caller: &serde_json::Value) -> bool {
 }
 
 fn err(message: &str) -> String {
+    // Déjà un objet JSON d'erreur (client, tar…) : pas de double emballage.
+    if message.trim_start().starts_with("{") {
+        if let Ok(v) = serde_json::from_str::<serde_json::Value>(message) {
+            if v.get("error").is_some() {
+                return message.to_string();
+            }
+        }
+    }
     format!("{{\"error\":\"{}\"}}", message.replace('\\', "\\\\").replace('"', "\\\""))
 }
 
@@ -70,8 +79,8 @@ unsafe extern "C" fn plugin_run(
     let cmd = dkbot_host_api::read_cstr(cmd);
     let args_json = dkbot_host_api::read_cstr(args_json);
     let response = match run_command(&cmd, &args_json) {
-        Ok(body) => body,
-        Err(message) => err(&message),
+        Ok(body) => cards::cardify(&cmd, &body),
+        Err(message) => cards::cardify(&cmd, &err(&message)),
     };
     // SAFETY : tampon borné fourni par l'hôte (contrat ABI).
     unsafe { dkbot_host_api::write_out(out, out_cap, response.as_bytes()) }
