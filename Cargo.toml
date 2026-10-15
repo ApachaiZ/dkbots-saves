@@ -1,0 +1,18 @@
+[package]
+name = "dkbots-saves"
+version = "0.1.0"
+edition = "2021"
+description = "Plugin dkbot : sauvegardes du monde de jeu (archives tar, emplacement configurable)"
+license = "MIT"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+dkbot-host-api = { git = "https://github.com/ApachaiZ/dkbot-base", tag = "v0.2.0" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[profile.release]
+opt-level = 3
+lto = "thin"
