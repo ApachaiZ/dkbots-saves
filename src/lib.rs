@@ -13,7 +13,15 @@ use std::ffi::c_char;
 use dkbot_host_api::{export_plugin, PluginVtable};
 
 static NAME: &[u8] = b"saves\0";
-static COMMANDS: &[u8] = b"[\"backup\",\"list\",\"restore\"]\0";
+static COMMANDS: &str = r#"{
+  "group": "saves",
+  "description": "Sauvegardes du monde de jeu",
+  "commands": [
+    {"name":"backup","description":"Archive le monde maintenant","args":[]},
+    {"name":"list","description":"Archives existantes","args":[]},
+    {"name":"restore","description":"Restaure la dernière archive (service arrêté requis)","args":[]}
+  ]
+}"#;
 
 fn caller_from(args_json: &str) -> serde_json::Value {
     let root: serde_json::Value = serde_json::from_str(args_json).unwrap_or(serde_json::json!({}));
@@ -47,7 +55,10 @@ unsafe extern "C" fn plugin_name() -> *const c_char {
 }
 
 unsafe extern "C" fn plugin_list() -> *const c_char {
-    COMMANDS.as_ptr() as *const c_char
+    use std::sync::OnceLock;
+    static C: OnceLock<std::ffi::CString> = OnceLock::new();
+    C.get_or_init(|| std::ffi::CString::new(COMMANDS).expect("manifeste valide"))
+        .as_ptr()
 }
 
 unsafe extern "C" fn plugin_run(
